@@ -32,11 +32,19 @@ jobs:
       - name: Validate credentials JSON
         run: node -e "JSON.parse(require('fs').readFileSync('credentials.json', 'utf8'))"
 
-      - name: Start local server
-        run: python3 -m http.server 8000 > /tmp/hack-with-india-server.log 2>&1 &
-
       - name: Check page response
-        run: curl --fail --retry 5 --retry-delay 1 http://127.0.0.1:8000/
+        run: |
+          python3 -m http.server 8000 > /tmp/hack-with-india-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in 1 2 3 4 5; do
+            if curl --fail http://127.0.0.1:8000/; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/hack-with-india-server.log
+          exit 1
 
   deploy:
     name: Deploy to GitHub Pages
