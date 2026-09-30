@@ -1,0 +1,63 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "ci/**"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    name: Validate static site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate JavaScript
+        run: node --check script.js
+
+      - name: Validate credentials JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('credentials.json', 'utf8'))"
+
+      - name: Start local server
+        run: python3 -m http.server 8000 > /tmp/hack-with-india-server.log 2>&1 &
+
+      - name: Check page response
+        run: curl --fail --retry 5 --retry-delay 1 http://127.0.0.1:8000/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
