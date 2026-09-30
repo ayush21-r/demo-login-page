@@ -5,6 +5,9 @@ const emailError = document.querySelector("#email-error");
 const passwordError = document.querySelector("#password-error");
 const formStatus = document.querySelector("#form-status");
 const showPasswordButton = document.querySelector(".show-password");
+const demoCredentials = [
+  { email: "demo@hackwithindia.com", password: "welcome123" }
+];
 
 showPasswordButton.addEventListener("click", () => {
   const isPasswordVisible = passwordInput.type === "text";
@@ -56,12 +59,16 @@ loginForm.addEventListener("submit", async (event) => {
   }
 
   try {
-    const response = await fetch("credentials.json");
-    if (!response.ok) {
-      throw new Error("Credentials could not be loaded.");
+    let credentials = demoCredentials;
+    try {
+      const response = await fetch("credentials.json");
+      if (response.ok) {
+        credentials = await response.json();
+      }
+    } catch (error) {
+      console.info("Using the local demo credentials fallback.", error);
     }
 
-    const credentials = await response.json();
     const isMatch = credentials.some(
       (account) => account.email.toLowerCase() === email && account.password === password
     );
